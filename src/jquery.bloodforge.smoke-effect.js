@@ -1,5 +1,5 @@
 ﻿/*
-Bloodforge Smoke Effect v1.3
+Bloodforge Smoke Effect v1.4
 
 Copyright (c) 2017 Filip Stanek (http://bloodforge.com)
 Based off code written by Johny Cornwell (http://www.blog.jonnycornwell.com/)
@@ -31,11 +31,11 @@ function Particle(context, canvasWidth, canvasHeight) {
     this._y = 0;
 
     // Set the initial velocity
-    this._xVelocity = 0.5;
-    this._yVelocity = 0.5;
+    this._xVelocity = 50;
+    this._yVelocity = 50;
 
     // Store the context which will be used to draw the particle
-    this._context = context;   
+    this._context = context;
 
     this._innerColor = 'rgba(0, 0, 0, 0.2)';
     this._outerColor = 'rgba(0, 0, 0, 0)';
@@ -48,10 +48,10 @@ function Particle(context, canvasWidth, canvasHeight) {
 }
 
 // The function to draw the particle on the canvas.
-Particle.prototype.Draw = function () {    
+Particle.prototype.Draw = function () {
     var gradient = this._context.createRadialGradient(this._x, this._y, 5, this._x, this._y, this._radius);
     gradient.addColorStop(0, this._innerColor);
-    gradient.addColorStop(1, this._outerColor);    
+    gradient.addColorStop(1, this._outerColor);
 
     this._context.beginPath();
     this._context.arc(this._x, this._y, this._radius, 0, 2 * Math.PI);
@@ -61,17 +61,17 @@ Particle.prototype.Draw = function () {
 };
 
 // Update the particle.
-Particle.prototype.Update = function () {
+Particle.prototype.Update = function (travelPercentage) {
     // Update the position of the particle with the addition of the velocity.
-    this._x += this._xVelocity;
-    this._y += this._yVelocity;
+    this._x += (this._xVelocity * travelPercentage);
+    this._y += (this._yVelocity * travelPercentage);
 
     // Check if has crossed the right edge
     if (this._x >= this._canvasWidth) {
         this._xVelocity = -this._xVelocity;
         this._x = this._canvasWidth;
     }
-        // Check if has crossed the left edge
+    // Check if has crossed the left edge
     else if (this._x <= 0) {
         this._xVelocity = -this._xVelocity;
         this._x = 0;
@@ -83,7 +83,7 @@ Particle.prototype.Update = function () {
         this._y = this._canvasHeight;
     }
 
-        // Check if has crossed the top edge
+    // Check if has crossed the top edge
     else if (this._y <= 0) {
         this._yVelocity = -this._yVelocity;
         this._y = 0;
@@ -119,6 +119,28 @@ Particle.prototype.GenerateRandom = function (min, max) {
 
     var PLUGIN_NAME = 'SmokeEffect';
 
+    var colorToRGBA = function (color) {
+        var cvs, ctx;
+        cvs = document.createElement('canvas');
+        cvs.height = 1;
+        cvs.width = 1;
+        ctx = cvs.getContext('2d');
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, 1, 1);
+        return ctx.getImageData(0, 0, 1, 1).data;
+    };
+
+    var calculateParticleCount = function (width, height, density, radius) {
+        var totalPixels = width * height;
+        var imgPixels = radius * radius * Math.PI;
+        var areaRatio = totalPixels / imgPixels;
+        return Math.ceil(density * areaRatio);
+    };
+
+    var fnAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || function (fn) {
+        return setTimeout(fn, 15);
+    };
+
     var methods = {
 
         init: function (options) {
@@ -129,135 +151,146 @@ Particle.prototype.GenerateRandom = function (min, max) {
                 var settings = $.extend({
                     color: 'black',
                     opacity: 0.2,
-                    density: 8,
-                    maximumVelocity: 1,
-                    fps: 15,
-                    particleRadius: 128,
+                    density: 10,
+                    maximumVelocity: 50,
+                    particleRadius: 150
                 }, options);
 
                 var bInitialized = $container.data(PLUGIN_NAME);
                 if (!bInitialized) {
 
                     var canvas;
-                    var width = $container.outerWidth();
-                    var height = $container.outerHeight();
+
+                    settings.width = $container.outerWidth();
+                    settings.height = $container.outerHeight();
 
                     if ($container.prop('tagName') == 'CANVAS') {
                         canvas = $container[0];
+                        settings.isCanvas = true;
                     }
                     else {
                         canvas = document.createElement('CANVAS');
-                        canvas.width = width;
-                        canvas.height = height;
+                        canvas.width = settings.width;
+                        canvas.height = settings.height;
+                        settings.isCanvas = false;
                     }
 
                     if (canvas && canvas.getContext) {
-                        var context;
-                        if ($container.prop('tagName') == 'CANVAS') {
-                            context = canvas.getContext('2d');
-                        }
-                        else {
-                            context = canvas.getContext('2d');
-                        }
-
-                        var particles = [];
-
-                        // Create the particles and set their initial positions and velocities
-                        var totalPixels = width * height;
-                        var imgpixels = settings.particleRadius * settings.particleRadius * Math.PI;
-                        var areaRatio = imgpixels / totalPixels;
-                        var particleCount = Math.ceil(settings.density / areaRatio);
-
-                        settings.color = methods.colorToRGBA(settings.color);
-
-                        for (var i = 0; i < particleCount; ++i) {
-                            var particle = new Particle(context, width, height);
-
-                            // Set particle properties
-                            particle.SetPosition(particle.GenerateRandom(0, width), particle.GenerateRandom(0, height));
-                            particle.SetVelocity(settings.maximumVelocity);
-                            particle.SetRadius(settings.particleRadius);
-                            particle.SetColor(settings.color, settings.opacity);
-
-                            particles.push(particle);
-                        }
-
-                        settings.context = context;
-                        settings.particles = particles;
-
-                        $container.data(PLUGIN_NAME, settings);
-
-                        setInterval(function () {
-
-                            $container.SmokeEffect('update');
-                            $container.SmokeEffect('draw');
-
-                        }, 1000 / settings.fps);
+                        settings.context = canvas.getContext('2d');
+                        settings.color = colorToRGBA(settings.color);
                     }
                     else {
                         $.error('Cannot create SmokeEffect because the browser lacks support');
                     }
-                }
+                    $container.data(PLUGIN_NAME, settings);
+                    $container.SmokeEffect('createParticles');
 
+                    // set up animation loop
+                    var lastFrame = 0;
+                    var loop = function (now) {
+                        var deltaT = now - lastFrame;
+
+                        // only do this at 15FPS, at most
+                        if (deltaT > 66) {
+                            $container.SmokeEffect('update', now - lastFrame);
+                            lastFrame = now;
+                        }
+
+                        requestAnimationFrame(loop);
+                    };
+                    loop(lastFrame);
+                }
             });
         },
 
-        colorToRGBA: function (color) {
-            var cvs, ctx;
-            cvs = document.createElement('canvas');
-            cvs.height = 1;
-            cvs.width = 1;
-            ctx = cvs.getContext('2d');
-            ctx.fillStyle = color;
-            ctx.fillRect(0, 0, 1, 1);
-            return ctx.getImageData(0, 0, 1, 1).data;
+        createParticles: function () {
+            return this.each(function () {
+                var $container = $(this);
+                var settings = $container.data(PLUGIN_NAME);
+                if (settings && settings.context) {
+                    var particles = settings.particles || [];
+
+                    // Create the particles and set their initial positions and velocities
+                    var particleCount = calculateParticleCount(settings.width, settings.height, settings.density, settings.particleRadius);
+
+                    while (particles.length > particleCount) {
+                        settings.particles.pop();
+                    }
+
+                    while (particles.length < particleCount) {
+                        var particle = new Particle(settings.context, settings.width, settings.height);
+
+                        // Set particle properties
+                        particle.SetPosition(particle.GenerateRandom(0, settings.width), particle.GenerateRandom(0, settings.height));
+                        particle.SetVelocity(settings.maximumVelocity);
+                        particle.SetRadius(settings.particleRadius);
+                        particle.SetColor(settings.color, settings.opacity);
+
+                        particles.push(particle);
+                    }
+                    settings.particles = particles;
+
+                    $container.data(PLUGIN_NAME, settings);
+                }
+            });
         },
 
-        update: function () {
+        update: function (deltaT) {
             // Update the scene
-
             var settings = $(this).data(PLUGIN_NAME);
 
-            if (settings) {
+            if (settings && settings.context) {
+                var $container = $(this);
+                
+                var width = $container.outerWidth();
+                var height = $container.outerHeight();
+                if (settings.width != width || settings.height != height) {
+                    $container.SmokeEffect('resize');
+                    return;
+                }
+
+                // Clear the drawing surface
+                settings.context.clearRect(0, 0, settings.width, settings.height);
+
+                var travelPercentage = Math.min(deltaT / 1000, 1);
+
                 settings.particles.forEach(function (particle) {
-                    particle.Update();
-                });
-            }
-        },
-
-        draw: function () {
-            // The function to draw the scene
-
-            var settings = $(this).data(PLUGIN_NAME);
-
-            if (settings) {
-                // Clear the drawing surface and fill it with a black background
-                settings.context.clearRect(0, 0, $(this).outerWidth(), $(this).outerHeight());
-
-                // Go through all of the particles and draw them.
-                settings.particles.forEach(function (particle) {
+                    particle.Update(travelPercentage);
                     particle.Draw();
                 });
 
-                if ($(this).prop('tagName') != 'CANVAS') {
-                    var $container = $(this);
+                if (!settings.isCanvas) {
                     var img = new Image();
                     img.onload = function () {
                         $container.css('backgroundImage', 'url(' + this.src + ')');
-                    }               
+                    };
                     img.src = settings.context.canvas.toDataURL();
                 }
             }
         },
 
         resize: function () {
-            var $container = $(this);
-            var settings = $container.data(PLUGIN_NAME);
-            var newWidth = $container.outerWidth();
-            var newHeight = $container.outerHeight();
-            settings.context.clearRect(0, 0, newWidth, newHeight);
-            //settings.context = document.getCSSCanvasContext('2d', settings.canvasID, newWidth, newHeight);
-            $container.data(PLUGIN_NAME, settings);
+            return this.each(function () {
+                var $container = $(this);
+                var settings = $container.data(PLUGIN_NAME);
+                settings.width = $container.outerWidth();
+                settings.height = $container.outerHeight();
+                settings.particles = [];
+                if (settings.isCanvas) {
+                    $container.get(0).width = settings.width;
+                    $container.get(0).height = settings.height;
+                }
+                else {
+                    var canvas = document.createElement('CANVAS');
+                    canvas.width = settings.width;
+                    canvas.height = settings.height;
+                    if (canvas && canvas.getContext) {
+                        settings.context = canvas.getContext('2d');
+                    }
+                }
+                $container.data(PLUGIN_NAME, settings);
+                $container.SmokeEffect('createParticles');
+            });
         },
 
         option: function (sName, vValue) {
@@ -284,7 +317,7 @@ Particle.prototype.GenerateRandom = function (min, max) {
                     });
                     break;
                 case "color":
-                    settings.color = methods.colorToRGBA(vValue);
+                    settings.color = colorToRGBA(vValue);
                     settings.particles.forEach(function (particle) {
                         particle.SetColor(settings.color, settings.opacity);
                     });
@@ -294,11 +327,13 @@ Particle.prototype.GenerateRandom = function (min, max) {
                         particle.SetColor(settings.color, vValue);
                     });
                     break;
+                case "density":
+                    $container.SmokeEffect('createParticles');
+                    break;
             }
 
             $container.data(PLUGIN_NAME, settings);
         }
-
     };
 
     $.fn.SmokeEffect = function (method) {

@@ -88,6 +88,8 @@ Particle.prototype.Update = function (travelPercentage) {
         this._yVelocity = -this._yVelocity;
         this._y = 0;
     }
+    this._x = Math.round(this._x);
+    this._y = Math.round(this._y);
 };
 
 // A function to set the position of the particle.

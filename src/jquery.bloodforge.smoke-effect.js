@@ -189,7 +189,8 @@ Particle.prototype.GenerateRandom = function (min, max) {
 
                     // set up animation loop
                     var lastFrame = 0;
-                    var loop = function (now) {
+                    var loop = function () {
+                        var now = new Date();
                         var deltaT = now - lastFrame;
 
                         // only do this at 15FPS, at most
@@ -198,7 +199,7 @@ Particle.prototype.GenerateRandom = function (min, max) {
                             lastFrame = now;
                         }
 
-                        requestAnimationFrame(loop);
+                        fnAnimationFrame(loop);
                     };
                     loop(lastFrame);
                 }

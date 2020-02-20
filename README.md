@@ -1,7 +1,7 @@
 # Bloodforge Smoke Effect
 I stumbled upon a very neat piece of code written by [Jonny Cornwell](http://www.blog.jonnycornwell.com/) for a particle smoke effect. The concept was really neat, but I really wanted it to be easier to use. The end result is a jQuery plugin that allows the developer to add a particle smoke effect background to any element on the page.
 
-See it in action by visiting my blog at https://bloodforge.com/#!/post/the-jquery-bloodforge-smoke-effect
+See it in action by visiting my blog at https://bloodforge.com/index.php/2015/06/12/the-jquery-bloodforge-smoke-effect/
 ## Version History
 * **1.4:** Performance improvements & code cleanup. Remove `fps` setting. Resize handling. Changed defaults. The `density` setting can now be changed after initialization.
 * **1.3:** Allow the dynamic setting of SmokeEffect options.
